@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { readFileSync } from 'fs';
 import { parseEdges } from "./campus";
 import { getBuildings } from "./routes";
+import {getShortestPath} from './routes'
 
 
 // Parse the information about the walkways on campus.
@@ -15,5 +16,6 @@ const port: number = 8088;
 const app: Express = express();
 app.use(bodyParser.json());
  app.get("/api/buildings", getBuildings);
+ app.get('/api/shortestPath', getShortestPath);
 // TODO (Task 3): add a route to get the shortest path
 app.listen(port, () => console.log(`Server listening on ${port}`));

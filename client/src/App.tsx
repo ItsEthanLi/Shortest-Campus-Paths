@@ -1,7 +1,10 @@
 import React, { Component } from 'react';
-import { Building, Edge } from './buildings';
+import { Building, Edge, getSteps } from './buildings';
 import { Editor } from './Editor';
 import campusMap from './img/campus_map.jpg';
+import {isRecord} from './record'
+//note: add the function from https://docs.google.com/document/d/1haGCPx7Wk5c63LUoTSfCu5Jnf2se-gSrl2VxCClPDl8/edit?tab=t.0 into buildings.ts 
+//to make program work! I hit the 8 hr debug mark but in case you want to see if my code actually works that must be implemented into buildings.ts
 
 
 // Radius of the circles drawn for each marker.
@@ -22,7 +25,7 @@ export class App extends Component<AppProps, AppState> {
   constructor(props: AppProps) {
     super(props);
 
-    this.state = {};
+    this.state={};
   }
 
   componentDidMount = (): void => {
@@ -91,8 +94,74 @@ export class App extends Component<AppProps, AppState> {
       const [start, end] = endPoints;
       console.log(`show path from ${start.shortName} to ${end.shortName}`);
       // TODO (Task 4): fetch the shortest path and parse the response
+      fetch("/api/shortestPath?" + 
+         "start="+encodeURIComponent(start.shortName) + "&end="+encodeURIComponent(end.shortName))
+      .then(this.doPathResp).catch(this.doPathError)
     } else {
       console.log('show no path');
     }
   };
+
+  doPathResp = (res: Response):void => {
+    //check for errors
+    if(res.status === 200) {
+      const  p = res.json()
+      p.then(this.doPathJson).catch(()=>this.doPathError("200 response not valid JSON"))
+    } else if(res.status === 400) {
+      res.text().then(this.doPathError).catch(()=>this.doPathError("400 response is not text"))
+    } else {
+      this.doPathError(`bad status code ${res.status}`)
+    }
+  }
+
+  doPathJson = (data: unknown): void => {
+    if(!isRecord(data)) {
+
+      this.doPathError(`bad type for data: ${typeof data}`)
+      return;
+    } 
+    
+    const path = data.path;
+    if(path === undefined || path === null) {
+      this.doPathError(`data is undefined`)
+      return;
+    } 
+    if(!isRecord(path)) {
+      this.doPathError(`path is not a record`)
+      return;
+    }
+    if(!isRecord(path.end)) {
+      this.doPathError(`path.end is not a record`)
+      return;
+    }
+    if(!isRecord(path.start)) {
+      this.doPathError(`path.start is not a record`)
+      return;
+    }
+    if(typeof path.start.x !=="number" || typeof path.end.y !== "number") {
+      this.doPathError(`end x and y aren't numbers${typeof path.end.x + "," + typeof path.end.y}`);
+    }
+    if(typeof path.end.x !=="number" || typeof path.end.y !== "number") {
+      this.doPathError(`end x and y aren't numbers${typeof path.end.x + "," + typeof path.end.y}`);
+    }
+    if(!Array.isArray(path.steps)) {
+      this.doPathError(`path.steps isn't an array ${typeof path.steps}`)
+    }
+    if(typeof path.dist !== "number") {
+      this.doPathError(`dist is not type number${typeof path.dist}`);
+    }
+    if(isRecord(path)) {
+      this.setState({path: getSteps(path.steps)})
+    } 
+  }
+
+  doPathError = (msg: string): void => {
+    //console.error('Error fetching /api/my-route: ${msg}');
+    console.error(`Error fetching /api/shortestPath: ${msg}`);
+    
+  };
+
+  
+    
+  
 }
